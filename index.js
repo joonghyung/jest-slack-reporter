@@ -10,21 +10,50 @@ module.exports = testResults => {
     throw new Error("Please add a slack webhookUrl field under jestSlackReporter on your package.json");
   }
 
-  const errText = `<!here> Just a quick heads up, *${testResults.numFailedTests}* tests have failed :(
-  Please take a look. Peace`;
+  //console.log( JSON.stringify(testResults) );
+  if( testResults.numFailedTests > 0){
 
-  const passingText = `Sweet, all tests have passed`;
+    var msg = testResults.testResults[0].testResults[0].failureMessages[0];
+    var n1 = msg.indexOf("@@@");
+    var n2 = msg.lastIndexOf("@@@");
+    const errText = msg.substring(n1+3, n2);
+  
+    //console.log("send slack api " + webhookUrl + " " + errText );
 
-  const text = testResults.numFailedTests > 0 ? errText : passingText;
+    const options = {
+      uri: webhookUrl,
+      method: 'POST',
+      json: {
+        "attachments": [ 
+            {
+                "fields": [
+                    {
+                        "title": "[NEW]",
+                        "value": errText
+                    }
+                ],
+                "color": "#F35A00"
+            }
+        ]
+      },
+      mrkdwn: true,
+    };
 
-  const options = {
-    uri: webhookUrl,
-    method: 'POST',
-    json: { text },
-    mrkdwn: true,
-  };
+    var promise1 = function () {
+      return new Promise(function (resolve, reject) {
+        // async
+        request.post(options, function (err, httpResponse, body) {
+          console.log( JSON.stringify(httpResponse));
+          resolve("1");
+        });
+      });
+    };
 
-  request(options);
+    Promise.all([promise1()]).then(function (values) {
+      //console.log("completed...", values);
+      return testResults;
+    });
+  }
 
   return testResults;
 };
